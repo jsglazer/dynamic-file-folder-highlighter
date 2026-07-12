@@ -36,7 +36,8 @@ var DEFAULT_SETTINGS = {
   hierarchyBgColorDark: "#2c7be5",
   regexRules: [],
   yamlRules: [],
-  conditionalRules: []
+  conditionalRules: [],
+  folderHighlightRules: []
 };
 function migrateThemedColors(entry) {
   const out = { ...entry };
@@ -56,7 +57,13 @@ function migrateThemedColors(entry) {
 }
 function migrateSettings(raw) {
   const data = { ...raw };
-  for (const key of ["colorCombos", "regexRules", "yamlRules", "conditionalRules"]) {
+  for (const key of [
+    "colorCombos",
+    "regexRules",
+    "yamlRules",
+    "conditionalRules",
+    "folderHighlightRules"
+  ]) {
     const arr = data[key];
     if (Array.isArray(arr)) {
       data[key] = arr.map((entry) => migrateThemedColors(entry));
@@ -108,7 +115,7 @@ var FileFolderHighlighterSettingTab = class extends import_obsidian.PluginSettin
     containerEl.empty();
     new import_obsidian.Setting(containerEl).setName("Color combinations").setHeading();
     containerEl.createEl("p", {
-      text: "Named color combinations you can assign to files and folders via right-click. Leave font or background unset to keep the Obsidian default. Each color has separate light (\u2600) and dark (\u{1F319}) theme variants.",
+      text: "Named color combinations you can assign to files and folders via right-click. Leave font or background unset to keep the Obsidian default. Each color has separate light and dark theme variants.",
       cls: "setting-item-description"
     });
     const combosEl = containerEl.createDiv("hh-list");
@@ -128,8 +135,31 @@ var FileFolderHighlighterSettingTab = class extends import_obsidian.PluginSettin
         this.plugin.updateStyles();
       })
     );
+    new import_obsidian.Setting(containerEl).setName("Folder highlighting").setHeading();
+    containerEl.createEl("p", {
+      text: "Highlight specific folders by exact path. Same priority as colors assigned via right-click; hierarchy highlighting (below) still overrides both for the active file\u2019s own folder trail.",
+      cls: "setting-item-description"
+    });
+    const folderHighlightsEl = containerEl.createDiv("hh-list");
+    this.renderFolderHighlightRules(folderHighlightsEl);
+    new import_obsidian.Setting(containerEl).addButton(
+      (btn) => btn.setButtonText("Add folder rule").setCta().onClick(async () => {
+        this.plugin.settings.folderHighlightRules.push({
+          id: genId(),
+          path: "",
+          fontColorLight: "#ffffff",
+          bgColorLight: "#16a085",
+          fontColorDark: "#ffffff",
+          bgColorDark: "#16a085"
+        });
+        await this.plugin.saveSettings();
+        this.renderFolderHighlightRules(folderHighlightsEl);
+      })
+    );
     new import_obsidian.Setting(containerEl).setName("Hierarchy highlighting").setHeading();
-    new import_obsidian.Setting(containerEl).setName("Enable").setDesc("Highlight all ancestor folders of the currently active file.").addToggle(
+    new import_obsidian.Setting(containerEl).setName("Enable").setDesc(
+      "Highlight all ancestor folders of the currently active file. Takes precedence over every other rule, including manually assigned colors."
+    ).addToggle(
       (t) => t.setValue(this.plugin.settings.hierarchyEnabled).onChange(async (v) => {
         this.plugin.settings.hierarchyEnabled = v;
         await this.plugin.saveSettings();
@@ -138,21 +168,26 @@ var FileFolderHighlighterSettingTab = class extends import_obsidian.PluginSettin
     );
     const hierFontRow = new import_obsidian.Setting(containerEl).setName("Font color").setDesc("Leave unset to use the Obsidian default.");
     const hierFontPair = hierFontRow.controlEl.createDiv("hh-color-pair");
-    this.addColorSwatch(hierFontPair, "\u2600", this.plugin.settings.hierarchyFontColorLight, (v) => {
-      this.plugin.settings.hierarchyFontColorLight = v;
-      this.plugin.scheduleSaveAndUpdate();
-    });
-    this.addColorSwatch(hierFontPair, "\u{1F319}", this.plugin.settings.hierarchyFontColorDark, (v) => {
+    this.addColorSwatch(
+      hierFontPair,
+      "Light",
+      this.plugin.settings.hierarchyFontColorLight,
+      (v) => {
+        this.plugin.settings.hierarchyFontColorLight = v;
+        this.plugin.scheduleSaveAndUpdate();
+      }
+    );
+    this.addColorSwatch(hierFontPair, "Dark", this.plugin.settings.hierarchyFontColorDark, (v) => {
       this.plugin.settings.hierarchyFontColorDark = v;
       this.plugin.scheduleSaveAndUpdate();
     });
     const hierBgRow = new import_obsidian.Setting(containerEl).setName("Background color").setDesc("Leave unset to use the Obsidian default.");
     const hierBgPair = hierBgRow.controlEl.createDiv("hh-color-pair");
-    this.addColorSwatch(hierBgPair, "\u2600", this.plugin.settings.hierarchyBgColorLight, (v) => {
+    this.addColorSwatch(hierBgPair, "Light", this.plugin.settings.hierarchyBgColorLight, (v) => {
       this.plugin.settings.hierarchyBgColorLight = v;
       this.plugin.scheduleSaveAndUpdate();
     });
-    this.addColorSwatch(hierBgPair, "\u{1F319}", this.plugin.settings.hierarchyBgColorDark, (v) => {
+    this.addColorSwatch(hierBgPair, "Dark", this.plugin.settings.hierarchyBgColorDark, (v) => {
       this.plugin.settings.hierarchyBgColorDark = v;
       this.plugin.scheduleSaveAndUpdate();
     });
@@ -607,6 +642,72 @@ var FileFolderHighlighterSettingTab = class extends import_obsidian.PluginSettin
       this.addTabToggle(row2, rule);
     });
   }
+  // ── Folder highlight rule list ───────────────────────────────────────────────
+  renderFolderHighlightRules(container) {
+    container.empty();
+    if (this.plugin.settings.folderHighlightRules.length === 0) {
+      container.createEl("p", {
+        text: "No folder rules defined.",
+        cls: "setting-item-description hh-empty"
+      });
+      return;
+    }
+    const folderPaths = this.plugin.getAllFolders().map((f) => f.path);
+    this.plugin.settings.folderHighlightRules.forEach((rule, i) => {
+      const row = container.createDiv("hh-row");
+      const listId = `hh-folder-list-${rule.id}`;
+      const datalist = row.createEl("datalist");
+      datalist.id = listId;
+      for (const p of folderPaths) {
+        datalist.createEl("option", { value: p });
+      }
+      const pathInput = row.createEl("input", {
+        cls: "hh-input hh-pattern-input",
+        placeholder: "Folder path"
+      });
+      pathInput.type = "text";
+      pathInput.value = rule.path;
+      pathInput.setAttribute("list", listId);
+      pathInput.addEventListener("input", () => {
+        rule.path = pathInput.value.trim();
+        this.plugin.scheduleSaveAndUpdate();
+      });
+      this.addThemedColorInput(
+        row,
+        "Font",
+        rule,
+        "font",
+        (v) => {
+          rule.fontColorLight = v;
+          this.plugin.scheduleSaveAndUpdate();
+        },
+        (v) => {
+          rule.fontColorDark = v;
+          this.plugin.scheduleSaveAndUpdate();
+        }
+      );
+      this.addThemedColorInput(
+        row,
+        "BG",
+        rule,
+        "bg",
+        (v) => {
+          rule.bgColorLight = v;
+          this.plugin.scheduleSaveAndUpdate();
+        },
+        (v) => {
+          rule.bgColorDark = v;
+          this.plugin.scheduleSaveAndUpdate();
+        }
+      );
+      this.addDeleteButton(row, "Delete folder rule", async () => {
+        this.plugin.settings.folderHighlightRules.splice(i, 1);
+        await this.plugin.saveSettings();
+        this.renderFolderHighlightRules(container);
+        this.plugin.updateStyles();
+      });
+    });
+  }
   // ── Helpers ─────────────────────────────────────────────────────────────────
   /** Immediate save + refresh for discrete changes (selects, checkboxes). */
   persist() {
@@ -620,8 +721,8 @@ var FileFolderHighlighterSettingTab = class extends import_obsidian.PluginSettin
     const pair = wrap.createDiv("hh-color-pair");
     const lightKey = prefix === "font" ? "fontColorLight" : "bgColorLight";
     const darkKey = prefix === "font" ? "fontColorDark" : "bgColorDark";
-    this.addColorSwatch(pair, "\u2600", entry[lightKey], onLightChange);
-    this.addColorSwatch(pair, "\u{1F319}", entry[darkKey], onDarkChange);
+    this.addColorSwatch(pair, "Light", entry[lightKey], onLightChange);
+    this.addColorSwatch(pair, "Dark", entry[darkKey], onDarkChange);
   }
   addColorSwatch(parent, subLabel, value, onChange) {
     const slot = parent.createDiv("hh-color-slot");
@@ -697,6 +798,7 @@ var FileFolderHighlighterPlugin = class extends import_obsidian2.Plugin {
   constructor() {
     super(...arguments);
     this.currentHierarchyPaths = /* @__PURE__ */ new Set();
+    this.currentActiveFilePath = "";
     // Path → style maps computed by updateStyles(); applyStyles() reads them so
     // re-applying after a DOM rebuild never has to re-evaluate the rules.
     this.navFileStyles = /* @__PURE__ */ new Map();
@@ -902,8 +1004,10 @@ var FileFolderHighlighterPlugin = class extends import_obsidian2.Plugin {
   }
   updateHierarchy() {
     this.currentHierarchyPaths = /* @__PURE__ */ new Set();
+    this.currentActiveFilePath = "";
     const activeFile = this.app.workspace.getActiveFile();
     if (activeFile) {
+      this.currentActiveFilePath = activeFile.path;
       const parts = activeFile.path.split("/");
       for (let i = 1; i < parts.length; i++) {
         this.currentHierarchyPaths.add(parts.slice(0, i).join("/"));
@@ -1010,17 +1114,11 @@ var FileFolderHighlighterPlugin = class extends import_obsidian2.Plugin {
         if (rule.applyToTab) tabStyles.set(winner.file.path, style);
       }
     }
-    if (this.settings.hierarchyEnabled) {
-      const { font, bg } = this.pickColors({
-        fontColorLight: this.settings.hierarchyFontColorLight,
-        bgColorLight: this.settings.hierarchyBgColorLight,
-        fontColorDark: this.settings.hierarchyFontColorDark,
-        bgColorDark: this.settings.hierarchyBgColorDark
-      });
-      if (font || bg) {
-        const style = { font, bg };
-        for (const path of this.currentHierarchyPaths) navFolder.set(path, style);
-      }
+    for (const rule of this.settings.folderHighlightRules) {
+      if (!rule.path) continue;
+      const { font, bg } = this.pickColors(rule);
+      if (!font && !bg) continue;
+      navFolder.set(rule.path, { font, bg });
     }
     for (const entry of this.settings.fileColors) {
       const combo = this.settings.colorCombos.find((c) => c.id === entry.comboId);
@@ -1031,6 +1129,19 @@ var FileFolderHighlighterPlugin = class extends import_obsidian2.Plugin {
       navFile.set(entry.path, style);
       navFolder.set(entry.path, style);
       if (combo.applyToTab) tabStyles.set(entry.path, style);
+    }
+    if (this.settings.hierarchyEnabled) {
+      const { font, bg } = this.pickColors({
+        fontColorLight: this.settings.hierarchyFontColorLight,
+        bgColorLight: this.settings.hierarchyBgColorLight,
+        fontColorDark: this.settings.hierarchyFontColorDark,
+        bgColorDark: this.settings.hierarchyBgColorDark
+      });
+      if (font || bg) {
+        const style = { font, bg };
+        for (const path of this.currentHierarchyPaths) navFolder.set(path, style);
+        if (this.currentActiveFilePath) navFile.set(this.currentActiveFilePath, style);
+      }
     }
     this.navFileStyles = navFile;
     this.navFolderStyles = navFolder;

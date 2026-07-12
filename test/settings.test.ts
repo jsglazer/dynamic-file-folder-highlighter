@@ -8,6 +8,7 @@ describe('DEFAULT_SETTINGS', () => {
 		expect(DEFAULT_SETTINGS.regexRules).toEqual([]);
 		expect(DEFAULT_SETTINGS.yamlRules).toEqual([]);
 		expect(DEFAULT_SETTINGS.conditionalRules).toEqual([]);
+		expect(DEFAULT_SETTINGS.folderHighlightRules).toEqual([]);
 	});
 
 	it('defaults the folder hierarchy highlight to off', () => {
@@ -52,6 +53,14 @@ describe('migrateSettings', () => {
 				},
 			],
 			yamlRules: [],
+			folderHighlightRules: [
+				{
+					id: 'd',
+					path: 'Projects/Work',
+					fontColor: '#ff00ff',
+					bgColor: '',
+				},
+			],
 		};
 
 		const migrated = migrateSettings(legacy);
@@ -71,6 +80,12 @@ describe('migrateSettings', () => {
 		expect(migrated.conditionalRules[0]).toMatchObject({
 			fontColorLight: '#15c412',
 			fontColorDark: '#15c412',
+		});
+		expect(migrated.folderHighlightRules[0]).toMatchObject({
+			fontColorLight: '#ff00ff',
+			fontColorDark: '#ff00ff',
+			bgColorLight: '',
+			bgColorDark: '',
 		});
 
 		// Legacy keys are removed once migrated.

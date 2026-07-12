@@ -419,7 +419,30 @@ export default class FileFolderHighlighterPlugin extends Plugin {
 			}
 		}
 
-		// 4. Hierarchy — highlights the active file and its ancestor folders
+		// 4. Folder highlighting rules + explicit file/folder assignments — same tier
+		for (const rule of this.settings.folderHighlightRules) {
+			if (!rule.path) continue;
+			const { font, bg } = this.pickColors(rule);
+			if (!font && !bg) continue;
+			navFolder.set(rule.path, { font, bg });
+		}
+
+		for (const entry of this.settings.fileColors) {
+			const combo = this.settings.colorCombos.find((c) => c.id === entry.comboId);
+			if (!combo) continue;
+			const { font, bg } = this.pickColors(combo);
+			if (!font && !bg) continue;
+			const style: NavStyle = { font, bg };
+			// A path is either a file or a folder; set both, only the matching
+			// element will exist in the explorer DOM.
+			navFile.set(entry.path, style);
+			navFolder.set(entry.path, style);
+			if (combo.applyToTab) tabStyles.set(entry.path, style);
+		}
+
+		// 5. Hierarchy — highlights the active file and its ancestor folders;
+		// highest priority, overrides every rule above (including explicit
+		// per-file/folder colors) for paths in the active file's own trail.
 		if (this.settings.hierarchyEnabled) {
 			const { font, bg } = this.pickColors({
 				fontColorLight: this.settings.hierarchyFontColorLight,
@@ -432,20 +455,6 @@ export default class FileFolderHighlighterPlugin extends Plugin {
 				for (const path of this.currentHierarchyPaths) navFolder.set(path, style);
 				if (this.currentActiveFilePath) navFile.set(this.currentActiveFilePath, style);
 			}
-		}
-
-		// 5. Explicit file/folder assignments — highest priority
-		for (const entry of this.settings.fileColors) {
-			const combo = this.settings.colorCombos.find((c) => c.id === entry.comboId);
-			if (!combo) continue;
-			const { font, bg } = this.pickColors(combo);
-			if (!font && !bg) continue;
-			const style: NavStyle = { font, bg };
-			// A path is either a file or a folder; set both, only the matching
-			// element will exist in the explorer DOM.
-			navFile.set(entry.path, style);
-			navFolder.set(entry.path, style);
-			if (combo.applyToTab) tabStyles.set(entry.path, style);
 		}
 
 		this.navFileStyles = navFile;

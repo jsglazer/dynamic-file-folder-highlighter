@@ -41,6 +41,14 @@ export interface YamlRule extends ThemedColors {
 	value: string;
 }
 
+// Highlights one exact folder path (not its contents) with its own colors.
+// Same priority tier as explicit right-click assignments; hierarchy still
+// overrides both.
+export interface FolderHighlightRule extends ThemedColors {
+	id: string;
+	path: string;
+}
+
 export interface FileFolderHighlighterSettings {
 	colorCombos: ColorCombo[];
 	fileColors: FileColorEntry[];
@@ -52,6 +60,7 @@ export interface FileFolderHighlighterSettings {
 	regexRules: RegexRule[];
 	yamlRules: YamlRule[];
 	conditionalRules: ConditionalRule[];
+	folderHighlightRules: FolderHighlightRule[];
 }
 
 export const DEFAULT_SETTINGS: FileFolderHighlighterSettings = {
@@ -65,6 +74,7 @@ export const DEFAULT_SETTINGS: FileFolderHighlighterSettings = {
 	regexRules: [],
 	yamlRules: [],
 	conditionalRules: [],
+	folderHighlightRules: [],
 };
 
 /**
@@ -92,7 +102,13 @@ function migrateThemedColors(entry: Record<string, unknown>): Record<string, unk
 export function migrateSettings(raw: unknown): FileFolderHighlighterSettings {
 	const data: Record<string, unknown> = { ...(raw as Record<string, unknown> | null) };
 
-	for (const key of ['colorCombos', 'regexRules', 'yamlRules', 'conditionalRules'] as const) {
+	for (const key of [
+		'colorCombos',
+		'regexRules',
+		'yamlRules',
+		'conditionalRules',
+		'folderHighlightRules',
+	] as const) {
 		const arr = data[key];
 		if (Array.isArray(arr)) {
 			data[key] = arr.map((entry) => migrateThemedColors(entry as Record<string, unknown>));

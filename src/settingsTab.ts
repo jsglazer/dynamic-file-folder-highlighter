@@ -1,6 +1,13 @@
 import { App, PluginSettingTab, Setting } from 'obsidian';
 import FileFolderHighlighterPlugin from './main';
-import { ColorCombo, RegexRule, YamlRule, ConditionalRule, ThemedColors } from './settings';
+import {
+	ColorCombo,
+	RegexRule,
+	YamlRule,
+	ConditionalRule,
+	FolderHighlightRule,
+	ThemedColors,
+} from './settings';
 
 function genId(): string {
 	if (typeof window.crypto?.randomUUID === 'function') {
@@ -59,12 +66,42 @@ export class FileFolderHighlighterSettingTab extends PluginSettingTab {
 				}),
 		);
 
+		// ── Folder Highlighting ──────────────────────────────────────────────────
+		new Setting(containerEl).setName('Folder highlighting').setHeading();
+		containerEl.createEl('p', {
+			text: 'Highlight specific folders by exact path. Same priority as colors assigned via right-click; hierarchy highlighting (below) still overrides both for the active file’s own folder trail.',
+			cls: 'setting-item-description',
+		});
+
+		const folderHighlightsEl = containerEl.createDiv('hh-list');
+		this.renderFolderHighlightRules(folderHighlightsEl);
+
+		new Setting(containerEl).addButton((btn) =>
+			btn
+				.setButtonText('Add folder rule')
+				.setCta()
+				.onClick(async () => {
+					this.plugin.settings.folderHighlightRules.push({
+						id: genId(),
+						path: '',
+						fontColorLight: '#ffffff',
+						bgColorLight: '#16a085',
+						fontColorDark: '#ffffff',
+						bgColorDark: '#16a085',
+					});
+					await this.plugin.saveSettings();
+					this.renderFolderHighlightRules(folderHighlightsEl);
+				}),
+		);
+
 		// ── Hierarchy Highlighting ────────────────────────────────────────────────
 		new Setting(containerEl).setName('Hierarchy highlighting').setHeading();
 
 		new Setting(containerEl)
 			.setName('Enable')
-			.setDesc('Highlight all ancestor folders of the currently active file.')
+			.setDesc(
+				'Highlight all ancestor folders of the currently active file. Takes precedence over every other rule, including manually assigned colors.',
+			)
 			.addToggle((t) =>
 				t.setValue(this.plugin.settings.hierarchyEnabled).onChange(async (v) => {
 					this.plugin.settings.hierarchyEnabled = v;
@@ -77,10 +114,15 @@ export class FileFolderHighlighterSettingTab extends PluginSettingTab {
 			.setName('Font color')
 			.setDesc('Leave unset to use the Obsidian default.');
 		const hierFontPair = hierFontRow.controlEl.createDiv('hh-color-pair');
-		this.addColorSwatch(hierFontPair, 'Light', this.plugin.settings.hierarchyFontColorLight, (v) => {
-			this.plugin.settings.hierarchyFontColorLight = v;
-			this.plugin.scheduleSaveAndUpdate();
-		});
+		this.addColorSwatch(
+			hierFontPair,
+			'Light',
+			this.plugin.settings.hierarchyFontColorLight,
+			(v) => {
+				this.plugin.settings.hierarchyFontColorLight = v;
+				this.plugin.scheduleSaveAndUpdate();
+			},
+		);
 		this.addColorSwatch(hierFontPair, 'Dark', this.plugin.settings.hierarchyFontColorDark, (v) => {
 			this.plugin.settings.hierarchyFontColorDark = v;
 			this.plugin.scheduleSaveAndUpdate();
@@ -624,6 +666,82 @@ export class FileFolderHighlighterSettingTab extends PluginSettingTab {
 			);
 
 			this.addTabToggle(row2, rule);
+		});
+	}
+
+	// ── Folder highlight rule list ───────────────────────────────────────────────
+
+	private renderFolderHighlightRules(container: HTMLElement) {
+		container.empty();
+
+		if (this.plugin.settings.folderHighlightRules.length === 0) {
+			container.createEl('p', {
+				text: 'No folder rules defined.',
+				cls: 'setting-item-description hh-empty',
+			});
+			return;
+		}
+
+		const folderPaths = this.plugin.getAllFolders().map((f) => f.path);
+
+		this.plugin.settings.folderHighlightRules.forEach((rule: FolderHighlightRule, i: number) => {
+			const row = container.createDiv('hh-row');
+
+			const listId = `hh-folder-list-${rule.id}`;
+			const datalist = row.createEl('datalist');
+			datalist.id = listId;
+			for (const p of folderPaths) {
+				datalist.createEl('option', { value: p });
+			}
+
+			const pathInput = row.createEl('input', {
+				cls: 'hh-input hh-pattern-input',
+				placeholder: 'Folder path',
+			});
+			pathInput.type = 'text';
+			pathInput.value = rule.path;
+			pathInput.setAttribute('list', listId);
+			pathInput.addEventListener('input', () => {
+				rule.path = pathInput.value.trim();
+				this.plugin.scheduleSaveAndUpdate();
+			});
+
+			this.addThemedColorInput(
+				row,
+				'Font',
+				rule,
+				'font',
+				(v) => {
+					rule.fontColorLight = v;
+					this.plugin.scheduleSaveAndUpdate();
+				},
+				(v) => {
+					rule.fontColorDark = v;
+					this.plugin.scheduleSaveAndUpdate();
+				},
+			);
+
+			this.addThemedColorInput(
+				row,
+				'BG',
+				rule,
+				'bg',
+				(v) => {
+					rule.bgColorLight = v;
+					this.plugin.scheduleSaveAndUpdate();
+				},
+				(v) => {
+					rule.bgColorDark = v;
+					this.plugin.scheduleSaveAndUpdate();
+				},
+			);
+
+			this.addDeleteButton(row, 'Delete folder rule', async () => {
+				this.plugin.settings.folderHighlightRules.splice(i, 1);
+				await this.plugin.saveSettings();
+				this.renderFolderHighlightRules(container);
+				this.plugin.updateStyles();
+			});
 		});
 	}
 
