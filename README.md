@@ -8,16 +8,18 @@ An Obsidian plugin that provides rich and flexible visual highlighting for files
 
 - **Custom colors for files/folders**: Right-click any file or folder → "File/folder color options" to assign a named color combination. Font and background colors are each optional — leave either unset to keep the Obsidian default.
 - **Parent hierarchy highlighting**: Automatically highlights the currently active file and all of its ancestor folders. Toggle on/off via settings or command palette. Takes precedence over every other rule, including manually assigned colors.
+- **Active file highlighting**: Give the currently active file its own font/background colors, separate from the ancestor-folder colors above. Works independently of hierarchy highlighting — turn it on with or without hierarchy enabled — and toggles via settings or command palette. When both are enabled, this wins for the active file itself while hierarchy still colors its ancestor folders.
 - **Folder highlighting**: Highlight specific folders by exact path, defined directly in settings — no right-click needed. Applies to that folder only (not its contents).
 - **Regex-based highlighting**: Define regex patterns with associated colors that apply to matching file/folder names. Supports targeting files, folders, or both. File patterns match against the **basename** (no extension), so `\bDev$` matches `MyNoteDev.md` — write patterns as if the `.md` isn't there. The settings panel shows up to 3 matching files/folders below each rule so you can confirm the pattern is right.
 - **YAML frontmatter rules**: Apply colors to files based on a specific key/value in their frontmatter (e.g. `Status: Refine`). Updates live as you edit files. Files only — folders have no frontmatter.
 - **Conditional highlighting**: Highlight the file with the highest or lowest numeric value in folders matching a name pattern. Example: automatically highlight the latest `UpdateNN.md` file across all `Updates` folders.
-- **Separate light/dark colors**: Every color (combinations, folder highlights, regex, YAML, conditional, and hierarchy) has independent light-theme and dark-theme variants, swapped automatically when you switch Obsidian themes.
+- **Separate light/dark colors**: Every color (combinations, folder highlights, regex, YAML, conditional, hierarchy, and active file) has independent light-theme and dark-theme variants, swapped automatically when you switch Obsidian themes.
 
 ## Settings
 
 - Define unlimited named color combinations (font + background; each color is optional, with separate light/dark variants)
 - Hierarchy color pickers with optional override (leave unset for Obsidian default), separate light/dark variants
+- Active file color pickers with optional override (leave unset for Obsidian default), separate light/dark variants
 - Folder highlighting rules: exact folder path (with autocomplete from existing vault folders) + its own font/background colors, separate light/dark variants
 - Regex rules with live validation (invalid patterns shown in red); file patterns match the basename — no need to account for the `.md` extension; shows up to 3 random matching examples live as you edit the pattern
 - YAML rules: key + exact value (case-sensitive trim match)
@@ -32,7 +34,8 @@ When multiple rules match the same file/folder, later rules win:
 2. YAML frontmatter rules
 3. Conditional rules
 4. Folder highlighting rules and explicit right-click assignments (same tier)
-5. Hierarchy — active file and its ancestor folders (highest, overrides all of the above)
+5. Active file highlighting — the active file only, independent of hierarchy
+6. Hierarchy — active file and its ancestor folders (highest for ancestor folders; for the active file itself, yields to Active file highlighting when that's enabled)
 
 ## Installation
 
@@ -41,7 +44,7 @@ When multiple rules match the same file/folder, later rules win:
 
 ## Version
 
-1.3.2
+1.3.3
 
 ## License
 
