@@ -34,6 +34,11 @@ var DEFAULT_SETTINGS = {
   hierarchyBgColorLight: "#2c7be5",
   hierarchyFontColorDark: "#ffffff",
   hierarchyBgColorDark: "#2c7be5",
+  activeFileHighlightEnabled: false,
+  activeFileFontColorLight: "#ffffff",
+  activeFileBgColorLight: "#e67e22",
+  activeFileFontColorDark: "#ffffff",
+  activeFileBgColorDark: "#e67e22",
   regexRules: [],
   yamlRules: [],
   conditionalRules: [],
@@ -191,6 +196,56 @@ var FileFolderHighlighterSettingTab = class extends import_obsidian.PluginSettin
       this.plugin.settings.hierarchyBgColorDark = v;
       this.plugin.scheduleSaveAndUpdate();
     });
+    new import_obsidian.Setting(containerEl).setName("Active file highlighting").setHeading();
+    new import_obsidian.Setting(containerEl).setName("Enable").setDesc(
+      "Highlight the currently active file with its own colors, separate from the ancestor-folder colors above. Works independently of hierarchy highlighting and takes precedence over every other rule for the active file."
+    ).addToggle(
+      (t) => t.setValue(this.plugin.settings.activeFileHighlightEnabled).onChange(async (v) => {
+        this.plugin.settings.activeFileHighlightEnabled = v;
+        await this.plugin.saveSettings();
+        this.plugin.updateStyles();
+      })
+    );
+    const activeFileFontRow = new import_obsidian.Setting(containerEl).setName("Font color").setDesc("Leave unset to use the Obsidian default.");
+    const activeFileFontPair = activeFileFontRow.controlEl.createDiv("hh-color-pair");
+    this.addColorSwatch(
+      activeFileFontPair,
+      "Light",
+      this.plugin.settings.activeFileFontColorLight,
+      (v) => {
+        this.plugin.settings.activeFileFontColorLight = v;
+        this.plugin.scheduleSaveAndUpdate();
+      }
+    );
+    this.addColorSwatch(
+      activeFileFontPair,
+      "Dark",
+      this.plugin.settings.activeFileFontColorDark,
+      (v) => {
+        this.plugin.settings.activeFileFontColorDark = v;
+        this.plugin.scheduleSaveAndUpdate();
+      }
+    );
+    const activeFileBgRow = new import_obsidian.Setting(containerEl).setName("Background color").setDesc("Leave unset to use the Obsidian default.");
+    const activeFileBgPair = activeFileBgRow.controlEl.createDiv("hh-color-pair");
+    this.addColorSwatch(
+      activeFileBgPair,
+      "Light",
+      this.plugin.settings.activeFileBgColorLight,
+      (v) => {
+        this.plugin.settings.activeFileBgColorLight = v;
+        this.plugin.scheduleSaveAndUpdate();
+      }
+    );
+    this.addColorSwatch(
+      activeFileBgPair,
+      "Dark",
+      this.plugin.settings.activeFileBgColorDark,
+      (v) => {
+        this.plugin.settings.activeFileBgColorDark = v;
+        this.plugin.scheduleSaveAndUpdate();
+      }
+    );
     new import_obsidian.Setting(containerEl).setName("Regex highlighting rules").setHeading();
     containerEl.createEl("p", {
       text: "Apply colors to files or folders whose names match a regular expression.",
@@ -837,6 +892,18 @@ var FileFolderHighlighterPlugin = class extends import_obsidian2.Plugin {
         );
       }
     });
+    this.addCommand({
+      id: "toggle-active-file-highlighting",
+      name: "Toggle active file highlighting",
+      callback: async () => {
+        this.settings.activeFileHighlightEnabled = !this.settings.activeFileHighlightEnabled;
+        await this.saveSettings();
+        this.updateStyles();
+        new import_obsidian2.Notice(
+          `Active file highlighting ${this.settings.activeFileHighlightEnabled ? "enabled" : "disabled"}`
+        );
+      }
+    });
     this.registerEvent(
       this.app.workspace.on("file-menu", (menu, file) => {
         this.buildColorMenu(menu, file);
@@ -1013,7 +1080,9 @@ var FileFolderHighlighterPlugin = class extends import_obsidian2.Plugin {
         this.currentHierarchyPaths.add(parts.slice(0, i).join("/"));
       }
     }
-    if (this.settings.hierarchyEnabled) this.debouncedUpdate();
+    if (this.settings.hierarchyEnabled || this.settings.activeFileHighlightEnabled) {
+      this.debouncedUpdate();
+    }
   }
   isDarkTheme() {
     return activeDocument.body.classList.contains("theme-dark");
@@ -1130,6 +1199,19 @@ var FileFolderHighlighterPlugin = class extends import_obsidian2.Plugin {
       navFolder.set(entry.path, style);
       if (combo.applyToTab) tabStyles.set(entry.path, style);
     }
+    let activeFileStyled = false;
+    if (this.settings.activeFileHighlightEnabled && this.currentActiveFilePath) {
+      const { font, bg } = this.pickColors({
+        fontColorLight: this.settings.activeFileFontColorLight,
+        bgColorLight: this.settings.activeFileBgColorLight,
+        fontColorDark: this.settings.activeFileFontColorDark,
+        bgColorDark: this.settings.activeFileBgColorDark
+      });
+      if (font || bg) {
+        navFile.set(this.currentActiveFilePath, { font, bg });
+        activeFileStyled = true;
+      }
+    }
     if (this.settings.hierarchyEnabled) {
       const { font, bg } = this.pickColors({
         fontColorLight: this.settings.hierarchyFontColorLight,
@@ -1140,7 +1222,9 @@ var FileFolderHighlighterPlugin = class extends import_obsidian2.Plugin {
       if (font || bg) {
         const style = { font, bg };
         for (const path of this.currentHierarchyPaths) navFolder.set(path, style);
-        if (this.currentActiveFilePath) navFile.set(this.currentActiveFilePath, style);
+        if (this.currentActiveFilePath && !activeFileStyled) {
+          navFile.set(this.currentActiveFilePath, style);
+        }
       }
     }
     this.navFileStyles = navFile;

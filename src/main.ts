@@ -81,6 +81,19 @@ export default class FileFolderHighlighterPlugin extends Plugin {
 			},
 		});
 
+		this.addCommand({
+			id: 'toggle-active-file-highlighting',
+			name: 'Toggle active file highlighting',
+			callback: async () => {
+				this.settings.activeFileHighlightEnabled = !this.settings.activeFileHighlightEnabled;
+				await this.saveSettings();
+				this.updateStyles();
+				new Notice(
+					`Active file highlighting ${this.settings.activeFileHighlightEnabled ? 'enabled' : 'disabled'}`,
+				);
+			},
+		});
+
 		this.registerEvent(
 			this.app.workspace.on('file-menu', (menu, file) => {
 				this.buildColorMenu(menu, file);
@@ -296,9 +309,11 @@ export default class FileFolderHighlighterPlugin extends Plugin {
 				this.currentHierarchyPaths.add(parts.slice(0, i).join('/'));
 			}
 		}
-		// Paths are kept current on every leaf change so enabling the feature
+		// Paths are kept current on every leaf change so enabling either feature
 		// later works immediately, but styles only need refreshing when enabled.
-		if (this.settings.hierarchyEnabled) this.debouncedUpdate();
+		if (this.settings.hierarchyEnabled || this.settings.activeFileHighlightEnabled) {
+			this.debouncedUpdate();
+		}
 	}
 
 	private isDarkTheme(): boolean {
@@ -440,9 +455,28 @@ export default class FileFolderHighlighterPlugin extends Plugin {
 			if (combo.applyToTab) tabStyles.set(entry.path, style);
 		}
 
-		// 5. Hierarchy — highlights the active file and its ancestor folders;
+		// 5. Active file highlighting — highest priority, independent of the
+		// ancestor-folder hierarchy below; overrides every rule above (including
+		// hierarchy) for the active file itself.
+		let activeFileStyled = false;
+		if (this.settings.activeFileHighlightEnabled && this.currentActiveFilePath) {
+			const { font, bg } = this.pickColors({
+				fontColorLight: this.settings.activeFileFontColorLight,
+				bgColorLight: this.settings.activeFileBgColorLight,
+				fontColorDark: this.settings.activeFileFontColorDark,
+				bgColorDark: this.settings.activeFileBgColorDark,
+			});
+			if (font || bg) {
+				navFile.set(this.currentActiveFilePath, { font, bg });
+				activeFileStyled = true;
+			}
+		}
+
+		// 6. Hierarchy — highlights the active file and its ancestor folders;
 		// highest priority, overrides every rule above (including explicit
-		// per-file/folder colors) for paths in the active file's own trail.
+		// per-file/folder colors) for paths in the active file's own trail. If
+		// active file highlighting (above) already styled the active file, its
+		// colors win there and hierarchy colors apply only to ancestor folders.
 		if (this.settings.hierarchyEnabled) {
 			const { font, bg } = this.pickColors({
 				fontColorLight: this.settings.hierarchyFontColorLight,
@@ -453,7 +487,9 @@ export default class FileFolderHighlighterPlugin extends Plugin {
 			if (font || bg) {
 				const style: NavStyle = { font, bg };
 				for (const path of this.currentHierarchyPaths) navFolder.set(path, style);
-				if (this.currentActiveFilePath) navFile.set(this.currentActiveFilePath, style);
+				if (this.currentActiveFilePath && !activeFileStyled) {
+					navFile.set(this.currentActiveFilePath, style);
+				}
 			}
 		}
 

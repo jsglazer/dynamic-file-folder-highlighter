@@ -18,6 +18,14 @@ describe('DEFAULT_SETTINGS', () => {
 		expect(DEFAULT_SETTINGS.hierarchyFontColorDark).toBe('#ffffff');
 		expect(DEFAULT_SETTINGS.hierarchyBgColorDark).toBe('#2c7be5');
 	});
+
+	it('defaults active file highlighting to off', () => {
+		expect(DEFAULT_SETTINGS.activeFileHighlightEnabled).toBe(false);
+		expect(DEFAULT_SETTINGS.activeFileFontColorLight).toBe('#ffffff');
+		expect(DEFAULT_SETTINGS.activeFileBgColorLight).toBe('#e67e22');
+		expect(DEFAULT_SETTINGS.activeFileFontColorDark).toBe('#ffffff');
+		expect(DEFAULT_SETTINGS.activeFileBgColorDark).toBe('#e67e22');
+	});
 });
 
 describe('migrateSettings', () => {

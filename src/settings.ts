@@ -57,6 +57,11 @@ export interface FileFolderHighlighterSettings {
 	hierarchyBgColorLight: string;
 	hierarchyFontColorDark: string;
 	hierarchyBgColorDark: string;
+	activeFileHighlightEnabled: boolean;
+	activeFileFontColorLight: string;
+	activeFileBgColorLight: string;
+	activeFileFontColorDark: string;
+	activeFileBgColorDark: string;
 	regexRules: RegexRule[];
 	yamlRules: YamlRule[];
 	conditionalRules: ConditionalRule[];
@@ -71,6 +76,11 @@ export const DEFAULT_SETTINGS: FileFolderHighlighterSettings = {
 	hierarchyBgColorLight: '#2c7be5',
 	hierarchyFontColorDark: '#ffffff',
 	hierarchyBgColorDark: '#2c7be5',
+	activeFileHighlightEnabled: false,
+	activeFileFontColorLight: '#ffffff',
+	activeFileBgColorLight: '#e67e22',
+	activeFileFontColorDark: '#ffffff',
+	activeFileBgColorDark: '#e67e22',
 	regexRules: [],
 	yamlRules: [],
 	conditionalRules: [],

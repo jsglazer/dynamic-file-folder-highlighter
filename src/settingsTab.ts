@@ -141,6 +141,68 @@ export class FileFolderHighlighterSettingTab extends PluginSettingTab {
 			this.plugin.scheduleSaveAndUpdate();
 		});
 
+		// ── Active File Highlighting ─────────────────────────────────────────────
+		new Setting(containerEl).setName('Active file highlighting').setHeading();
+
+		new Setting(containerEl)
+			.setName('Enable')
+			.setDesc(
+				'Highlight the currently active file with its own colors, separate from the ancestor-folder colors above. Works independently of hierarchy highlighting and takes precedence over every other rule for the active file.',
+			)
+			.addToggle((t) =>
+				t.setValue(this.plugin.settings.activeFileHighlightEnabled).onChange(async (v) => {
+					this.plugin.settings.activeFileHighlightEnabled = v;
+					await this.plugin.saveSettings();
+					this.plugin.updateStyles();
+				}),
+			);
+
+		const activeFileFontRow = new Setting(containerEl)
+			.setName('Font color')
+			.setDesc('Leave unset to use the Obsidian default.');
+		const activeFileFontPair = activeFileFontRow.controlEl.createDiv('hh-color-pair');
+		this.addColorSwatch(
+			activeFileFontPair,
+			'Light',
+			this.plugin.settings.activeFileFontColorLight,
+			(v) => {
+				this.plugin.settings.activeFileFontColorLight = v;
+				this.plugin.scheduleSaveAndUpdate();
+			},
+		);
+		this.addColorSwatch(
+			activeFileFontPair,
+			'Dark',
+			this.plugin.settings.activeFileFontColorDark,
+			(v) => {
+				this.plugin.settings.activeFileFontColorDark = v;
+				this.plugin.scheduleSaveAndUpdate();
+			},
+		);
+
+		const activeFileBgRow = new Setting(containerEl)
+			.setName('Background color')
+			.setDesc('Leave unset to use the Obsidian default.');
+		const activeFileBgPair = activeFileBgRow.controlEl.createDiv('hh-color-pair');
+		this.addColorSwatch(
+			activeFileBgPair,
+			'Light',
+			this.plugin.settings.activeFileBgColorLight,
+			(v) => {
+				this.plugin.settings.activeFileBgColorLight = v;
+				this.plugin.scheduleSaveAndUpdate();
+			},
+		);
+		this.addColorSwatch(
+			activeFileBgPair,
+			'Dark',
+			this.plugin.settings.activeFileBgColorDark,
+			(v) => {
+				this.plugin.settings.activeFileBgColorDark = v;
+				this.plugin.scheduleSaveAndUpdate();
+			},
+		);
+
 		// ── Regex Rules ───────────────────────────────────────────────────────────
 		new Setting(containerEl).setName('Regex highlighting rules').setHeading();
 		containerEl.createEl('p', {
