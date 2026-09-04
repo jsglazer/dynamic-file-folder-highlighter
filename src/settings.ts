@@ -22,6 +22,13 @@ export interface RegexRule extends ThemedColors {
 	name: string;
 	pattern: string;
 	appliesTo: 'files' | 'folders' | 'both';
+	/**
+	 * What the pattern is tested against. 'name' (the default, and what older
+	 * settings files imply) uses the file basename / folder name; 'path' uses
+	 * the full vault path with the file extension stripped, so patterns can
+	 * match e.g. "Classes/2026/Bio/Bio Notes".
+	 */
+	matchTarget?: 'name' | 'path';
 	applyToTab?: boolean;
 }
 
@@ -143,4 +150,13 @@ export function migrateSettings(raw: unknown): FileFolderHighlighterSettings {
 	}
 
 	return Object.assign({}, DEFAULT_SETTINGS, data);
+}
+
+// Drops a trailing file extension from a vault path, leaving the directories
+// intact: "Classes/2026/Bio/Bio Notes.md" → "Classes/2026/Bio/Bio Notes".
+// A dot in a folder name, or a leading-dot filename, is left alone.
+export function stripExtension(path: string): string {
+	const slash = path.lastIndexOf('/');
+	const dot = path.lastIndexOf('.');
+	return dot > slash + 1 ? path.slice(0, dot) : path;
 }

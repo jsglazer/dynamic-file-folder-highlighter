@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { DEFAULT_SETTINGS, migrateSettings } from '../src/settings';
+import { DEFAULT_SETTINGS, migrateSettings, stripExtension } from '../src/settings';
 
 describe('DEFAULT_SETTINGS', () => {
 	it('starts with empty rule collections', () => {
@@ -134,5 +134,23 @@ describe('migrateSettings', () => {
 			bgColorLight: '#333333',
 			bgColorDark: '#444444',
 		});
+	});
+});
+
+describe('stripExtension', () => {
+	it('drops the extension but keeps the directories', () => {
+		expect(stripExtension('Classes/2026/Bio/Bio Notes.md')).toBe('Classes/2026/Bio/Bio Notes');
+	});
+
+	it('leaves extensionless paths alone', () => {
+		expect(stripExtension('Classes/2026/Bio')).toBe('Classes/2026/Bio');
+	});
+
+	it('ignores dots in parent folder names', () => {
+		expect(stripExtension('v1.2/notes')).toBe('v1.2/notes');
+	});
+
+	it('keeps a leading-dot filename intact', () => {
+		expect(stripExtension('Classes/.hidden')).toBe('Classes/.hidden');
 	});
 });

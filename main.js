@@ -92,6 +92,11 @@ function migrateSettings(raw) {
   }
   return Object.assign({}, DEFAULT_SETTINGS, data);
 }
+function stripExtension(path) {
+  const slash = path.lastIndexOf("/");
+  const dot = path.lastIndexOf(".");
+  return dot > slash + 1 ? path.slice(0, dot) : path;
+}
 
 // src/settingsTab.ts
 var import_obsidian = require("obsidian");
@@ -251,6 +256,10 @@ var FileFolderHighlighterSettingTab = class extends import_obsidian.PluginSettin
       text: "Apply colors to files or folders whose names match a regular expression.",
       cls: "setting-item-description"
     });
+    containerEl.createEl("p", {
+      text: 'Switch a rule from name to full path to test the whole vault path instead of just the name \u2014 the file extension is stripped, so the pattern "classes/.+/(.+)/\\1 notes$" matches classes/2026/bio/bio notes.md.',
+      cls: "setting-item-description"
+    });
     const rulesEl = containerEl.createDiv("hh-list");
     this.renderRules(rulesEl);
     new import_obsidian.Setting(containerEl).addButton(
@@ -263,7 +272,8 @@ var FileFolderHighlighterSettingTab = class extends import_obsidian.PluginSettin
           bgColorLight: "#e74c3c",
           fontColorDark: "#ffffff",
           bgColorDark: "#e74c3c",
-          appliesTo: "both"
+          appliesTo: "both",
+          matchTarget: "name"
         });
         await this.plugin.saveSettings();
         this.renderRules(rulesEl);
@@ -412,6 +422,7 @@ var FileFolderHighlighterSettingTab = class extends import_obsidian.PluginSettin
       return;
     }
     this.plugin.settings.regexRules.forEach((rule, i) => {
+      var _a;
       const group = container.createDiv("hh-rule-group");
       const row = group.createDiv("hh-row");
       const nameInput = row.createEl("input", {
@@ -453,6 +464,22 @@ var FileFolderHighlighterSettingTab = class extends import_obsidian.PluginSettin
       select.value = rule.appliesTo;
       select.addEventListener("change", () => {
         rule.appliesTo = select.value;
+        this.persist();
+        refreshExamples();
+      });
+      const targetSelect = row.createEl("select", { cls: "hh-select" });
+      for (const [val, label] of [
+        ["name", "Name"],
+        ["path", "Full path"]
+      ]) {
+        const opt = targetSelect.createEl("option");
+        opt.value = val;
+        opt.textContent = label;
+      }
+      targetSelect.value = (_a = rule.matchTarget) != null ? _a : "name";
+      targetSelect.title = "Test the pattern against the file basename or folder name, or against the whole vault path with the file extension stripped.";
+      targetSelect.addEventListener("change", () => {
+        rule.matchTarget = targetSelect.value;
         this.persist();
         refreshExamples();
       });
@@ -504,14 +531,17 @@ var FileFolderHighlighterSettingTab = class extends import_obsidian.PluginSettin
       return;
     }
     const candidates = [];
+    const byPath = rule.matchTarget === "path";
     if (rule.appliesTo !== "folders") {
       for (const file of this.app.vault.getFiles()) {
-        if (regex.test(file.basename)) candidates.push(file.path);
+        const target = byPath ? stripExtension(file.path) : file.basename;
+        if (regex.test(target)) candidates.push(file.path);
       }
     }
     if (rule.appliesTo !== "files") {
       for (const folder of this.plugin.getAllFolders()) {
-        if (regex.test(folder.name)) candidates.push(folder.path + "/");
+        const target = byPath ? folder.path : folder.name;
+        if (regex.test(target)) candidates.push(folder.path + "/");
       }
     }
     if (candidates.length === 0) return;
@@ -1114,9 +1144,11 @@ var FileFolderHighlighterPlugin = class extends import_obsidian2.Plugin {
         continue;
       }
       const style = { font, bg };
+      const byPath = rule.matchTarget === "path";
       if (rule.appliesTo !== "folders") {
         for (const file of files) {
-          if (regex.test(file.basename)) {
+          const target = byPath ? stripExtension(file.path) : file.basename;
+          if (regex.test(target)) {
             navFile.set(file.path, style);
             if (rule.applyToTab) tabStyles.set(file.path, style);
           }
@@ -1124,7 +1156,8 @@ var FileFolderHighlighterPlugin = class extends import_obsidian2.Plugin {
       }
       if (rule.appliesTo !== "files") {
         for (const folder of folders) {
-          if (regex.test(folder.name)) navFolder.set(folder.path, style);
+          const target = byPath ? folder.path : folder.name;
+          if (regex.test(target)) navFolder.set(folder.path, style);
         }
       }
     }

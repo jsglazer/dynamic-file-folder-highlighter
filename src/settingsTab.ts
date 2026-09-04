@@ -7,6 +7,7 @@ import {
 	ConditionalRule,
 	FolderHighlightRule,
 	ThemedColors,
+	stripExtension,
 } from './settings';
 
 function genId(): string {
@@ -209,6 +210,10 @@ export class FileFolderHighlighterSettingTab extends PluginSettingTab {
 			text: 'Apply colors to files or folders whose names match a regular expression.',
 			cls: 'setting-item-description',
 		});
+		containerEl.createEl('p', {
+			text: 'Switch a rule from name to full path to test the whole vault path instead of just the name — the file extension is stripped, so the pattern "classes/.+/(.+)/\\1 notes$" matches classes/2026/bio/bio notes.md.',
+			cls: 'setting-item-description',
+		});
 
 		const rulesEl = containerEl.createDiv('hh-list');
 		this.renderRules(rulesEl);
@@ -227,6 +232,7 @@ export class FileFolderHighlighterSettingTab extends PluginSettingTab {
 						fontColorDark: '#ffffff',
 						bgColorDark: '#e74c3c',
 						appliesTo: 'both',
+						matchTarget: 'name',
 					});
 					await this.plugin.saveSettings();
 					this.renderRules(rulesEl);
@@ -455,6 +461,24 @@ export class FileFolderHighlighterSettingTab extends PluginSettingTab {
 				refreshExamples();
 			});
 
+			const targetSelect = row.createEl('select', { cls: 'hh-select' });
+			for (const [val, label] of [
+				['name', 'Name'],
+				['path', 'Full path'],
+			] as [string, string][]) {
+				const opt = targetSelect.createEl('option');
+				opt.value = val;
+				opt.textContent = label;
+			}
+			targetSelect.value = rule.matchTarget ?? 'name';
+			targetSelect.title =
+				'Test the pattern against the file basename or folder name, or against the whole vault path with the file extension stripped.';
+			targetSelect.addEventListener('change', () => {
+				rule.matchTarget = targetSelect.value as 'name' | 'path';
+				this.persist();
+				refreshExamples();
+			});
+
 			this.addThemedColorInput(
 				row,
 				'Font',
@@ -509,14 +533,17 @@ export class FileFolderHighlighterSettingTab extends PluginSettingTab {
 		}
 
 		const candidates: string[] = [];
+		const byPath = rule.matchTarget === 'path';
 		if (rule.appliesTo !== 'folders') {
 			for (const file of this.app.vault.getFiles()) {
-				if (regex.test(file.basename)) candidates.push(file.path);
+				const target = byPath ? stripExtension(file.path) : file.basename;
+				if (regex.test(target)) candidates.push(file.path);
 			}
 		}
 		if (rule.appliesTo !== 'files') {
 			for (const folder of this.plugin.getAllFolders()) {
-				if (regex.test(folder.name)) candidates.push(folder.path + '/');
+				const target = byPath ? folder.path : folder.name;
+				if (regex.test(target)) candidates.push(folder.path + '/');
 			}
 		}
 		if (candidates.length === 0) return;

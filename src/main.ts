@@ -9,7 +9,12 @@ import {
 	WorkspaceLeaf,
 	debounce,
 } from 'obsidian';
-import { FileFolderHighlighterSettings, ThemedColors, migrateSettings } from './settings';
+import {
+	FileFolderHighlighterSettings,
+	ThemedColors,
+	migrateSettings,
+	stripExtension,
+} from './settings';
 import { FileFolderHighlighterSettingTab } from './settingsTab';
 
 // Colors are applied to element styles; only accept hex values (which is all
@@ -350,10 +355,12 @@ export default class FileFolderHighlighterPlugin extends Plugin {
 				continue;
 			}
 			const style: NavStyle = { font, bg };
+			const byPath = rule.matchTarget === 'path';
 
 			if (rule.appliesTo !== 'folders') {
 				for (const file of files) {
-					if (regex.test(file.basename)) {
+					const target = byPath ? stripExtension(file.path) : file.basename;
+					if (regex.test(target)) {
 						navFile.set(file.path, style);
 						if (rule.applyToTab) tabStyles.set(file.path, style);
 					}
@@ -361,7 +368,8 @@ export default class FileFolderHighlighterPlugin extends Plugin {
 			}
 			if (rule.appliesTo !== 'files') {
 				for (const folder of folders) {
-					if (regex.test(folder.name)) navFolder.set(folder.path, style);
+					const target = byPath ? folder.path : folder.name;
+					if (regex.test(target)) navFolder.set(folder.path, style);
 				}
 			}
 		}
