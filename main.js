@@ -511,6 +511,7 @@ var FileFolderHighlighterSettingTab = class extends import_obsidian.PluginSettin
           this.plugin.scheduleSaveAndUpdate();
         }
       );
+      this.addNavToggle(row, rule);
       this.addTabToggle(row, rule);
       this.addDeleteButton(row, "Delete rule", async () => {
         this.plugin.settings.regexRules.splice(i, 1);
@@ -828,6 +829,19 @@ var FileFolderHighlighterSettingTab = class extends import_obsidian.PluginSettin
     });
     input.addEventListener("input", () => {
       if (checkbox.checked) onChange(input.value);
+    });
+  }
+  addNavToggle(parent, rule) {
+    const wrap = parent.createDiv("hh-color-wrap");
+    wrap.createEl("span", { text: "Nav", cls: "hh-color-label" });
+    const chk = wrap.createEl("input");
+    chk.type = "checkbox";
+    chk.checked = rule.applyToNav !== false;
+    chk.classList.add("hh-color-toggle");
+    chk.title = "Apply formatting to the Navigation Panel";
+    chk.addEventListener("change", () => {
+      rule.applyToNav = chk.checked;
+      this.persist();
     });
   }
   addTabToggle(parent, rule) {
@@ -1149,7 +1163,7 @@ var FileFolderHighlighterPlugin = class extends import_obsidian2.Plugin {
         for (const file of files) {
           const target = byPath ? stripExtension(file.path) : file.basename;
           if (regex.test(target)) {
-            navFile.set(file.path, style);
+            if (rule.applyToNav !== false) navFile.set(file.path, style);
             if (rule.applyToTab) tabStyles.set(file.path, style);
           }
         }
@@ -1157,7 +1171,7 @@ var FileFolderHighlighterPlugin = class extends import_obsidian2.Plugin {
       if (rule.appliesTo !== "files") {
         for (const folder of folders) {
           const target = byPath ? folder.path : folder.name;
-          if (regex.test(target)) navFolder.set(folder.path, style);
+          if (regex.test(target) && rule.applyToNav !== false) navFolder.set(folder.path, style);
         }
       }
     }

@@ -1,6 +1,6 @@
 {
 	"name": "file-folder-highlighter",
-	"version": "1.3.4",
+	"version": "1.3.5",
 	"description": "Custom colors for files/folders via right-click, YAML frontmatter rules, hierarchy, regex, and conditional highlighting.",
 	"main": "main.js",
 	"scripts": {

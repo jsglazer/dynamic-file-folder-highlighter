@@ -361,7 +361,7 @@ export default class FileFolderHighlighterPlugin extends Plugin {
 				for (const file of files) {
 					const target = byPath ? stripExtension(file.path) : file.basename;
 					if (regex.test(target)) {
-						navFile.set(file.path, style);
+						if (rule.applyToNav !== false) navFile.set(file.path, style);
 						if (rule.applyToTab) tabStyles.set(file.path, style);
 					}
 				}
@@ -369,7 +369,7 @@ export default class FileFolderHighlighterPlugin extends Plugin {
 			if (rule.appliesTo !== 'files') {
 				for (const folder of folders) {
 					const target = byPath ? folder.path : folder.name;
-					if (regex.test(target)) navFolder.set(folder.path, style);
+					if (regex.test(target) && rule.applyToNav !== false) navFolder.set(folder.path, style);
 				}
 			}
 		}

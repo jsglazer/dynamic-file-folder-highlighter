@@ -30,6 +30,8 @@ export interface RegexRule extends ThemedColors {
 	 */
 	matchTarget?: 'name' | 'path';
 	applyToTab?: boolean;
+	/** Whether formatting applies to the Navigation Panel; undefined/absent means true (legacy default). */
+	applyToNav?: boolean;
 }
 
 export interface ConditionalRule extends ThemedColors {

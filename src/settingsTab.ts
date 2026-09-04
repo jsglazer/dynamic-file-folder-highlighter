@@ -509,6 +509,7 @@ export class FileFolderHighlighterSettingTab extends PluginSettingTab {
 				},
 			);
 
+			this.addNavToggle(row, rule);
 			this.addTabToggle(row, rule);
 
 			this.addDeleteButton(row, 'Delete rule', async () => {
@@ -890,6 +891,20 @@ export class FileFolderHighlighterSettingTab extends PluginSettingTab {
 
 		input.addEventListener('input', () => {
 			if (checkbox.checked) onChange(input.value);
+		});
+	}
+
+	private addNavToggle(parent: HTMLElement, rule: RegexRule): void {
+		const wrap = parent.createDiv('hh-color-wrap');
+		wrap.createEl('span', { text: 'Nav', cls: 'hh-color-label' });
+		const chk = wrap.createEl('input');
+		chk.type = 'checkbox';
+		chk.checked = rule.applyToNav !== false;
+		chk.classList.add('hh-color-toggle');
+		chk.title = 'Apply formatting to the Navigation Panel';
+		chk.addEventListener('change', () => {
+			rule.applyToNav = chk.checked;
+			this.persist();
 		});
 	}
 
