@@ -29,6 +29,7 @@ An Obsidian plugin that provides rich and flexible visual highlighting for files
 - YAML rules: key + exact value (case-sensitive trim match)
 - Conditional rules: folder name regex + file name regex with numeric capture group + max/min condition
 - Color combinations, regex rules, and conditional rules can each optionally be applied to the evaluated tab header.
+- Regex rules can also independently toggle whether formatting is applied to the Navigation Panel (on by default) — useful for a rule meant only to color the tab header.
 
 ## Priority
 
@@ -48,7 +49,7 @@ When multiple rules match the same file/folder, later rules win:
 
 ## Version
 
-1.3.3
+1.3.5
 
 ## License
 
