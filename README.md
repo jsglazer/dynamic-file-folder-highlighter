@@ -7,14 +7,14 @@ An Obsidian plugin that provides rich and flexible visual highlighting for files
 ## Features
 
 - **Custom colors for files/folders**: Right-click any file or folder → "File/folder color options" to assign a named color combination. Font and background colors are each optional — leave either unset to keep the Obsidian default.
-- **Parent hierarchy highlighting**: Automatically highlights the currently active file and all of its ancestor folders. Toggle on/off via settings or command palette. Takes precedence over every other rule, including manually assigned colors.
+- **Parent hierarchy highlighting**: Automatically highlights the currently active file and all of its ancestor folders. Toggle on/off via settings or command palette. Takes precedence over every other rule, including manually assigned colors. An optional "Shade entire tree" setting extends this to every file and subfolder nested inside each ancestor folder, not just the ancestor row itself.
 - **Active file highlighting**: Give the currently active file its own font/background colors, separate from the ancestor-folder colors above. Works independently of hierarchy highlighting — turn it on with or without hierarchy enabled — and toggles via settings or command palette. When both are enabled, this wins for the active file itself while hierarchy still colors its ancestor folders.
 - **Folder highlighting**: Highlight specific folders by exact path, defined directly in settings — no right-click needed. Applies to that folder only (not its contents).
 - **Regex-based highlighting**: Define regex patterns with associated colors that apply to matching files and folders. Supports targeting files, folders, or both. Each rule also chooses what the pattern is tested against:
   - **Name** (the default): the file basename or the folder name. `\bDev$` matches `MyNoteDev.md` — write patterns as if the `.md` isn't there.
   - **Full path**: the whole vault path, with the file extension stripped, so a rule can target a nested layout. `Classes/.+/(.+)/\1 Notes$` matches `Classes/2026/Bio/Bio Notes.md`. Folders are tested against their full path (`Classes/2026/Bio`).
 
-  The settings panel shows up to 3 matching files/folders below each rule — in whichever mode the rule uses — so you can confirm the pattern is right.
+  The settings panel shows up to 3 matching files/folders below each rule — in whichever mode the rule uses — so you can confirm the pattern is right. Rules that apply to folders (or both) can also enable "Shade entire tree" to cascade the rule's colors onto every file and subfolder nested inside a matched folder, not just the folder itself.
 - **YAML frontmatter rules**: Apply colors to files based on a specific key/value in their frontmatter (e.g. `Status: Refine`). Updates live as you edit files. Files only — folders have no frontmatter.
 - **Conditional highlighting**: Highlight the file with the highest or lowest numeric value in folders matching a name pattern. Example: automatically highlight the latest `UpdateNN.md` file across all `Updates` folders.
 - **Separate light/dark colors**: Every color (combinations, folder highlights, regex, YAML, conditional, hierarchy, and active file) has independent light-theme and dark-theme variants, swapped automatically when you switch Obsidian themes.
@@ -30,6 +30,7 @@ An Obsidian plugin that provides rich and flexible visual highlighting for files
 - Conditional rules: folder name regex + file name regex with numeric capture group + max/min condition
 - Color combinations, regex rules, and conditional rules can each optionally be applied to the evaluated tab header.
 - Regex rules can also independently toggle whether formatting is applied to the Navigation Panel (on by default) — useful for a rule meant only to color the tab header.
+- Regex rules targeting folders (or both) can enable "Shade entire tree" to color every nested file/subfolder along with the matched folder; descendant files also pick up the rule's tab-header color if the Tab toggle is on.
 
 ## Priority
 
@@ -49,7 +50,7 @@ When multiple rules match the same file/folder, later rules win:
 
 ## Version
 
-1.3.5
+1.3.6
 
 ## License
 
