@@ -17,6 +17,7 @@ describe('DEFAULT_SETTINGS', () => {
 		expect(DEFAULT_SETTINGS.hierarchyBgColorLight).toBe('#2c7be5');
 		expect(DEFAULT_SETTINGS.hierarchyFontColorDark).toBe('#ffffff');
 		expect(DEFAULT_SETTINGS.hierarchyBgColorDark).toBe('#2c7be5');
+		expect(DEFAULT_SETTINGS.hierarchyShadeTree).toBe(false);
 	});
 
 	it('defaults active file highlighting to off', () => {

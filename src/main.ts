@@ -369,7 +369,19 @@ export default class FileFolderHighlighterPlugin extends Plugin {
 			if (rule.appliesTo !== 'files') {
 				for (const folder of folders) {
 					const target = byPath ? folder.path : folder.name;
-					if (regex.test(target) && rule.applyToNav !== false) navFolder.set(folder.path, style);
+					if (!regex.test(target) || rule.applyToNav === false) continue;
+					navFolder.set(folder.path, style);
+					if (rule.shadeTree) {
+						const prefix = folder.path + '/';
+						for (const f of folders) {
+							if (f.path.startsWith(prefix)) navFolder.set(f.path, style);
+						}
+						for (const file of files) {
+							if (!file.path.startsWith(prefix)) continue;
+							navFile.set(file.path, style);
+							if (rule.applyToTab) tabStyles.set(file.path, style);
+						}
+					}
 				}
 			}
 		}
@@ -495,6 +507,21 @@ export default class FileFolderHighlighterPlugin extends Plugin {
 			if (font || bg) {
 				const style: NavStyle = { font, bg };
 				for (const path of this.currentHierarchyPaths) navFolder.set(path, style);
+				if (this.settings.hierarchyShadeTree) {
+					for (const ancestorPath of this.currentHierarchyPaths) {
+						const prefix = ancestorPath + '/';
+						for (const folder of folders) {
+							if (folder.path.startsWith(prefix)) navFolder.set(folder.path, style);
+						}
+						for (const file of files) {
+							if (!file.path.startsWith(prefix)) continue;
+							// The active file itself is handled below, respecting
+							// activeFileStyled so its own highlight isn't clobbered.
+							if (file.path === this.currentActiveFilePath) continue;
+							navFile.set(file.path, style);
+						}
+					}
+				}
 				if (this.currentActiveFilePath && !activeFileStyled) {
 					navFile.set(this.currentActiveFilePath, style);
 				}

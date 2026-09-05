@@ -32,6 +32,12 @@ export interface RegexRule extends ThemedColors {
 	applyToTab?: boolean;
 	/** Whether formatting applies to the Navigation Panel; undefined/absent means true (legacy default). */
 	applyToNav?: boolean;
+	/**
+	 * When appliesTo is 'folders' or 'both' and a folder matches, also apply
+	 * this rule's colors to every file and subfolder nested inside it (not
+	 * just the matched folder's own row). Ignored for 'files' rules.
+	 */
+	shadeTree?: boolean;
 }
 
 export interface ConditionalRule extends ThemedColors {
@@ -66,6 +72,8 @@ export interface FileFolderHighlighterSettings {
 	hierarchyBgColorLight: string;
 	hierarchyFontColorDark: string;
 	hierarchyBgColorDark: string;
+	/** Also shade every file/subfolder nested inside each ancestor folder, not just the ancestor row itself. */
+	hierarchyShadeTree: boolean;
 	activeFileHighlightEnabled: boolean;
 	activeFileFontColorLight: string;
 	activeFileBgColorLight: string;
@@ -85,6 +93,7 @@ export const DEFAULT_SETTINGS: FileFolderHighlighterSettings = {
 	hierarchyBgColorLight: '#2c7be5',
 	hierarchyFontColorDark: '#ffffff',
 	hierarchyBgColorDark: '#2c7be5',
+	hierarchyShadeTree: false,
 	activeFileHighlightEnabled: false,
 	activeFileFontColorLight: '#ffffff',
 	activeFileBgColorLight: '#e67e22',

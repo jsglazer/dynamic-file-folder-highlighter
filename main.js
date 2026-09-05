@@ -34,6 +34,7 @@ var DEFAULT_SETTINGS = {
   hierarchyBgColorLight: "#2c7be5",
   hierarchyFontColorDark: "#ffffff",
   hierarchyBgColorDark: "#2c7be5",
+  hierarchyShadeTree: false,
   activeFileHighlightEnabled: false,
   activeFileFontColorLight: "#ffffff",
   activeFileBgColorLight: "#e67e22",
@@ -172,6 +173,15 @@ var FileFolderHighlighterSettingTab = class extends import_obsidian.PluginSettin
     ).addToggle(
       (t) => t.setValue(this.plugin.settings.hierarchyEnabled).onChange(async (v) => {
         this.plugin.settings.hierarchyEnabled = v;
+        await this.plugin.saveSettings();
+        this.plugin.updateStyles();
+      })
+    );
+    new import_obsidian.Setting(containerEl).setName("Shade entire tree").setDesc(
+      "Also shade every file and subfolder nested inside each ancestor folder, not just the ancestor folder itself."
+    ).addToggle(
+      (t) => t.setValue(this.plugin.settings.hierarchyShadeTree).onChange(async (v) => {
+        this.plugin.settings.hierarchyShadeTree = v;
         await this.plugin.saveSettings();
         this.plugin.updateStyles();
       })
@@ -466,6 +476,7 @@ var FileFolderHighlighterSettingTab = class extends import_obsidian.PluginSettin
         rule.appliesTo = select.value;
         this.persist();
         refreshExamples();
+        updateShadeTreeVisibility();
       });
       const targetSelect = row.createEl("select", { cls: "hh-select" });
       for (const [val, label] of [
@@ -513,6 +524,11 @@ var FileFolderHighlighterSettingTab = class extends import_obsidian.PluginSettin
       );
       this.addNavToggle(row, rule);
       this.addTabToggle(row, rule);
+      const shadeTreeWrap = this.addShadeTreeToggle(row, rule);
+      const updateShadeTreeVisibility = () => {
+        shadeTreeWrap.style.display = rule.appliesTo === "files" ? "none" : "";
+      };
+      updateShadeTreeVisibility();
       this.addDeleteButton(row, "Delete rule", async () => {
         this.plugin.settings.regexRules.splice(i, 1);
         await this.plugin.saveSettings();
@@ -844,6 +860,20 @@ var FileFolderHighlighterSettingTab = class extends import_obsidian.PluginSettin
       this.persist();
     });
   }
+  addShadeTreeToggle(parent, rule) {
+    const wrap = parent.createDiv("hh-color-wrap");
+    wrap.createEl("span", { text: "Tree", cls: "hh-color-label" });
+    const chk = wrap.createEl("input");
+    chk.type = "checkbox";
+    chk.checked = !!rule.shadeTree;
+    chk.classList.add("hh-color-toggle");
+    chk.title = "Also shade every file and subfolder nested inside a matched folder";
+    chk.addEventListener("change", () => {
+      rule.shadeTree = chk.checked;
+      this.persist();
+    });
+    return wrap;
+  }
   addTabToggle(parent, rule) {
     const wrap = parent.createDiv("hh-color-wrap");
     wrap.createEl("span", { text: "Tab", cls: "hh-color-label" });
@@ -1171,7 +1201,19 @@ var FileFolderHighlighterPlugin = class extends import_obsidian2.Plugin {
       if (rule.appliesTo !== "files") {
         for (const folder of folders) {
           const target = byPath ? folder.path : folder.name;
-          if (regex.test(target) && rule.applyToNav !== false) navFolder.set(folder.path, style);
+          if (!regex.test(target) || rule.applyToNav === false) continue;
+          navFolder.set(folder.path, style);
+          if (rule.shadeTree) {
+            const prefix = folder.path + "/";
+            for (const f of folders) {
+              if (f.path.startsWith(prefix)) navFolder.set(f.path, style);
+            }
+            for (const file of files) {
+              if (!file.path.startsWith(prefix)) continue;
+              navFile.set(file.path, style);
+              if (rule.applyToTab) tabStyles.set(file.path, style);
+            }
+          }
         }
       }
     }
@@ -1269,6 +1311,19 @@ var FileFolderHighlighterPlugin = class extends import_obsidian2.Plugin {
       if (font || bg) {
         const style = { font, bg };
         for (const path of this.currentHierarchyPaths) navFolder.set(path, style);
+        if (this.settings.hierarchyShadeTree) {
+          for (const ancestorPath of this.currentHierarchyPaths) {
+            const prefix = ancestorPath + "/";
+            for (const folder of folders) {
+              if (folder.path.startsWith(prefix)) navFolder.set(folder.path, style);
+            }
+            for (const file of files) {
+              if (!file.path.startsWith(prefix)) continue;
+              if (file.path === this.currentActiveFilePath) continue;
+              navFile.set(file.path, style);
+            }
+          }
+        }
         if (this.currentActiveFilePath && !activeFileStyled) {
           navFile.set(this.currentActiveFilePath, style);
         }

@@ -111,6 +111,19 @@ export class FileFolderHighlighterSettingTab extends PluginSettingTab {
 				}),
 			);
 
+		new Setting(containerEl)
+			.setName('Shade entire tree')
+			.setDesc(
+				'Also shade every file and subfolder nested inside each ancestor folder, not just the ancestor folder itself.',
+			)
+			.addToggle((t) =>
+				t.setValue(this.plugin.settings.hierarchyShadeTree).onChange(async (v) => {
+					this.plugin.settings.hierarchyShadeTree = v;
+					await this.plugin.saveSettings();
+					this.plugin.updateStyles();
+				}),
+			);
+
 		const hierFontRow = new Setting(containerEl)
 			.setName('Font color')
 			.setDesc('Leave unset to use the Obsidian default.');
@@ -459,6 +472,7 @@ export class FileFolderHighlighterSettingTab extends PluginSettingTab {
 				rule.appliesTo = select.value as 'files' | 'folders' | 'both';
 				this.persist();
 				refreshExamples();
+				updateShadeTreeVisibility();
 			});
 
 			const targetSelect = row.createEl('select', { cls: 'hh-select' });
@@ -511,6 +525,11 @@ export class FileFolderHighlighterSettingTab extends PluginSettingTab {
 
 			this.addNavToggle(row, rule);
 			this.addTabToggle(row, rule);
+			const shadeTreeWrap = this.addShadeTreeToggle(row, rule);
+			const updateShadeTreeVisibility = () => {
+				shadeTreeWrap.style.display = rule.appliesTo === 'files' ? 'none' : '';
+			};
+			updateShadeTreeVisibility();
 
 			this.addDeleteButton(row, 'Delete rule', async () => {
 				this.plugin.settings.regexRules.splice(i, 1);
@@ -906,6 +925,21 @@ export class FileFolderHighlighterSettingTab extends PluginSettingTab {
 			rule.applyToNav = chk.checked;
 			this.persist();
 		});
+	}
+
+	private addShadeTreeToggle(parent: HTMLElement, rule: RegexRule): HTMLElement {
+		const wrap = parent.createDiv('hh-color-wrap');
+		wrap.createEl('span', { text: 'Tree', cls: 'hh-color-label' });
+		const chk = wrap.createEl('input');
+		chk.type = 'checkbox';
+		chk.checked = !!rule.shadeTree;
+		chk.classList.add('hh-color-toggle');
+		chk.title = 'Also shade every file and subfolder nested inside a matched folder';
+		chk.addEventListener('change', () => {
+			rule.shadeTree = chk.checked;
+			this.persist();
+		});
+		return wrap;
 	}
 
 	private addTabToggle(parent: HTMLElement, rule: RegexRule | ConditionalRule | ColorCombo): void {
